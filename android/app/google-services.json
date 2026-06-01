@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "932446762055",
+    "project_id": "mini-digital-wallet",
+    "storage_bucket": "mini-digital-wallet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:932446762055:android:0fb06540e29973fb45ed62",
+        "android_client_info": {
+          "package_name": "com.example.mini_digital_wallet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_mzrcJ-chYJWuqQS1bIbWGBadpLf5yIo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
