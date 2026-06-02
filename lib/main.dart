@@ -6,18 +6,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'data/datasources/local/database_factory.dart';
 import 'data/datasources/local/local_database.dart';
 import 'data/models/transaction_model.dart';
-import 'firebase_options.dart';  
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Use the config file instead of hardcoded values
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
   runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -58,26 +58,22 @@ class _WalletHomePageState extends State<WalletHomePage> {
   }
 
   Future<void> _initialize() async {
-    print('📱 Initializing app...');
-    
     try {
-      // Initialize database
       localDatabase = DatabaseFactory.create();
       await localDatabase.init();
       setState(() {
         databaseType = localDatabase.databaseType;
       });
-      print('✅ Database initialized: $databaseType');
       
       // Listen to auth changes
       FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-        print('👤 Auth state changed: ${user?.uid ?? "null"}');
         setState(() {
           currentUser = user;
           errorMessage = '';
         });
         
         if (user != null) {
+          await _syncWithFirebase();  // Sync when logged in
           await _loadTransactions();
         } else {
           setState(() {
@@ -92,11 +88,61 @@ class _WalletHomePageState extends State<WalletHomePage> {
         isLoading = false;
       });
     } catch (e) {
-      print('❌ Initialization error: $e');
+      print('Initialization error: $e');
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _syncWithFirebase() async {
+    if (currentUser == null) return;
+    
+    try {
+      print('🔄 Syncing with Firebase...');
+      
+      // 1. Upload unsynced local transactions to Firebase
+      final unsynced = await localDatabase.getUnsyncedTransactions();
+      for (var transaction in unsynced) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser!.uid)
+            .collection('transactions')
+            .doc(transaction.id)
+            .set(transaction.toFirestore());
+        
+        await localDatabase.markAsSynced(transaction.id);
+        print('✅ Uploaded: ${transaction.title}');
+      }
+      
+      // 2. Download remote transactions from Firebase
+      final remoteSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser!.uid)
+          .collection('transactions')
+          .orderBy('createdAt', descending: true)
+          .get();
+      
+      for (var doc in remoteSnapshot.docs) {
+        final remoteTransaction = TransactionModel.fromFirestore(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+        
+        // Check if exists locally
+        final localTransactions = await localDatabase.getTransactions();
+        final exists = localTransactions.any((t) => t.id == remoteTransaction.id);
+        
+        if (!exists) {
+          await localDatabase.insertTransaction(remoteTransaction);
+          print('✅ Downloaded: ${remoteTransaction.title}');
+        }
+      }
+      
+      print('✅ Sync completed!');
+    } catch (e) {
+      print('❌ Sync error (offline mode): $e');
     }
   }
 
@@ -115,58 +161,22 @@ class _WalletHomePageState extends State<WalletHomePage> {
           }
         }
       });
-      print('📊 Loaded ${transactions.length} transactions');
+      print('📊 Loaded ${transactions.length} transactions from local DB');
     } catch (e) {
-      print('❌ Error loading transactions: $e');
-      setState(() {
-        errorMessage = e.toString();
-      });
+      print('Error loading transactions: $e');
     } finally {
       setState(() => isLoading = false);
     }
-  }
-
-  Future<void> _anonymousLogin() async {
-    print('🔐 Attempting anonymous login...');
-    setState(() {
-      isLoading = true;
-      errorMessage = '';
-    });
-    
-    try {
-      final userCredential = await FirebaseAuth.instance.signInAnonymously();
-      print('✅ Anonymous login successful: ${userCredential.user?.uid}');
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logged in! Using $databaseType')),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      print('❌ Firebase Auth error: ${e.code} - ${e.message}');
-      setState(() {
-        errorMessage = 'Auth Error: ${e.message}\nPlease enable Anonymous Authentication in Firebase Console.';
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}'), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
-      print('❌ Unexpected error: $e');
-      setState(() {
-        errorMessage = e.toString();
-      });
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
   }
 
   Future<void> _addTransaction(String type) async {
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login first!')),
+      );
+      return;
+    }
+    
     final transaction = TransactionModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: type == 'income' ? 'Salary' : 'Groceries',
@@ -180,14 +190,65 @@ class _WalletHomePageState extends State<WalletHomePage> {
       isSynced: false,
     );
     
+    // Save locally first (offline-first)
     await localDatabase.insertTransaction(transaction);
-    await _loadTransactions();
     
-    if (mounted) {
+    // Try to save to Firebase
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser!.uid)
+          .collection('transactions')
+          .doc(transaction.id)
+          .set(transaction.toFirestore());
+      
+      // Mark as synced
+      await localDatabase.markAsSynced(transaction.id);
+      print('✅ Transaction saved to Firebase!');
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${type == 'income' ? 'Income' : 'Expense'} added!')),
+        SnackBar(content: Text('${type == 'income' ? 'Income' : 'Expense'} added and synced to cloud!')),
+      );
+    } catch (e) {
+      print('❌ Offline: Transaction saved locally only');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${type == 'income' ? 'Income' : 'Expense'} added (will sync when online)')),
       );
     }
+    
+    await _loadTransactions();
+  }
+
+  Future<void> _anonymousLogin() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+    
+    try {
+      final userCredential = await FirebaseAuth.instance.signInAnonymously();
+      print('✅ Anonymous login successful: ${userCredential.user?.uid}');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logged in! Using $databaseType')),
+      );
+    } on FirebaseAuthException catch (e) {
+      print('Firebase Auth error: ${e.code}');
+      setState(() {
+        errorMessage = 'Auth Error: ${e.message}\nPlease enable Anonymous Authentication in Firebase Console.';
+      });
+    } catch (e) {
+      print('Unexpected error: $e');
+      setState(() {
+        errorMessage = e.toString();
+      });
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
   }
 
   @override
@@ -317,6 +378,23 @@ class _WalletHomePageState extends State<WalletHomePage> {
                             '${transactions.length} transactions • $databaseType',
                             style: const TextStyle(color: Colors.white70, fontSize: 12),
                           ),
+                          const SizedBox(height: 4),
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(currentUser!.uid)
+                                .collection('transactions')
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return Text(
+                                  '☁️ ${snapshot.data!.docs.length} in cloud',
+                                  style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -383,14 +461,25 @@ class _WalletHomePageState extends State<WalletHomePage> {
                                     ),
                                     title: Text(t.title),
                                     subtitle: Text(t.category),
-                                    trailing: Text(
-                                      '${t.type == 'income' ? '+' : '-'} ETB ${t.amount.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        color: t.type == 'income'
-                                            ? Colors.green
-                                            : Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    trailing: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '${t.type == 'income' ? '+' : '-'} ETB ${t.amount.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color: t.type == 'income'
+                                                ? Colors.green
+                                                : Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (!t.isSynced)
+                                          const Text(
+                                            '⚠️ Not synced',
+                                            style: TextStyle(fontSize: 10, color: Colors.orange),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 );
@@ -405,15 +494,13 @@ class _WalletHomePageState extends State<WalletHomePage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            kIsWeb ? Icons.web : Icons.storage,
+                            Icons.cloud_queue,
                             size: 16,
                             color: Colors.grey[600],
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            kIsWeb 
-                                ? 'Web mode • Using SharedPreferences • SQLite not supported'
-                                : 'SQLite database • Offline-first • Syncs with Firebase',
+                            'Data syncs with Firebase Firestore • Offline-first',
                             style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                           ),
                         ],
