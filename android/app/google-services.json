@@ -12,7 +12,20 @@
           "package_name": "com.example.mini_digital_wallet"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "932446762055-sl0k6287cou7oqurmoogubcdj7dpl515.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mini_digital_wallet",
+            "certificate_hash": "2e9c31710e5fb2d910e7572db94a45002af553d4"
+          }
+        },
+        {
+          "client_id": "932446762055-ltf9rqlft49pbd3r7f3q9h03r5c3b1jg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA_mzrcJ-chYJWuqQS1bIbWGBadpLf5yIo"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "932446762055-ltf9rqlft49pbd3r7f3q9h03r5c3b1jg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "932446762055-o863ig1h3gqc5ifeuceuep2hkmddj9ov.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minidigitalwallet"
+              }
+            }
+          ]
         }
       }
     }
