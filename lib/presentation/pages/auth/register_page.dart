@@ -1,33 +1,38 @@
-// lib/presentation/pages/auth/login_page.dart
+// lib/presentation/pages/auth/register_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
-import 'register_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(AuthLoginRequested(
+      context.read<AuthBloc>().add(AuthSignUpRequested(
+            name: _nameController.text.trim(),
             email: _emailController.text.trim(),
             password: _passwordController.text,
           ));
@@ -39,7 +44,8 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Authenticated) {
-          Navigator.pushReplacementNamed(context, '/dashboard');
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/dashboard', (route) => false);
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -52,53 +58,82 @@ class _LoginPageState extends State<LoginPage> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: Color(0xFF1E2A3E), size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
-                // Logo & header
+                // Header
                 Center(
                   child: Column(
                     children: [
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           color: const Color(0xFF54B998).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Icon(
-                          Icons.account_balance_wallet,
-                          size: 44,
+                          Icons.person_add_outlined,
+                          size: 38,
                           color: Color(0xFF54B998),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       const Text(
-                        'Mini Digital Wallet',
+                        'Create Account',
                         style: TextStyle(
-                          fontSize: 26,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1E2A3E),
                         ),
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'Sign in to your account',
+                        'Fill in your details to get started',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 // Form
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
+                      // Full name
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: _inputDecoration(
+                          label: 'Full name',
+                          icon: Icons.person_outline,
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Name is required';
+                          }
+                          if (v.trim().length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      // Email
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -119,12 +154,12 @@ class _LoginPageState extends State<LoginPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
+                      // Password
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submit(),
+                        textInputAction: TextInputAction.next,
                         decoration: _inputDecoration(
                           label: 'Password',
                           icon: Icons.lock_outline,
@@ -136,18 +171,54 @@ class _LoginPageState extends State<LoginPage> {
                                   : Icons.visibility_outlined,
                               color: Colors.grey,
                             ),
-                            onPressed: () =>
-                                setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword),
                           ),
                         ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password is required';
-                          if (v.length < 6) return 'Password must be at least 6 characters';
+                          if (v == null || v.isEmpty) {
+                            return 'Password is required';
+                          }
+                          if (v.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      // Confirm password
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirm,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: _inputDecoration(
+                          label: 'Confirm password',
+                          icon: Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirm
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Please confirm your password';
+                          }
+                          if (v != _passwordController.text) {
+                            return 'Passwords do not match';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 28),
-                      // Sign In button
+                      // Register button
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           final isLoading = state is AuthLoading;
@@ -175,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     )
                                   : const Text(
-                                      'Sign In',
+                                      'Create Account',
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600),
@@ -184,67 +255,20 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                       ),
-                      const SizedBox(height: 16),
-                      // Divider
-                      Row(
-                        children: [
-                          const Expanded(child: Divider()),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('or',
-                                style: TextStyle(color: Colors.grey.shade500)),
-                          ),
-                          const Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Guest login button
-                      BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          final isLoading = state is AuthLoading;
-                          return SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: isLoading
-                                  ? null
-                                  : () => context
-                                      .read<AuthBloc>()
-                                      .add(AuthAnonymousLoginRequested()),
-                              icon: const Icon(Icons.person_outline),
-                              label: const Text(
-                                'Continue as Guest',
-                                style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.w500),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF1E2A3E),
-                                side: const BorderSide(color: Color(0xFFDDE1E7)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                // Register link
+                const SizedBox(height: 28),
+                // Login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account? ",
+                    const Text('Already have an account? ',
                         style: TextStyle(color: Colors.grey)),
                     GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const RegisterPage()),
-                      ),
+                      onTap: () => Navigator.pop(context),
                       child: const Text(
-                        'Sign Up',
+                        'Sign In',
                         style: TextStyle(
                           color: Color(0xFF54B998),
                           fontWeight: FontWeight.w600,
@@ -253,6 +277,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
