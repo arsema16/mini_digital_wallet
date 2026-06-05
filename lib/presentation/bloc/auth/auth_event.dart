@@ -27,4 +27,6 @@ class AuthLoginRequested extends AuthEvent {
 
 class AuthAnonymousLoginRequested extends AuthEvent {}
 
+class AuthGoogleLoginRequested extends AuthEvent {}
+
 class AuthLogoutRequested extends AuthEvent {}
