@@ -1,7 +1,11 @@
+// lib/presentation/pages/transactions/transactions_screen.dart
+
 import 'package:flutter/material.dart';
-import '../../../data/datasources/local/database_factory.dart';
-import '../../../data/datasources/local/local_database.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/transaction_model.dart';
+import '../../bloc/transaction/transaction_bloc.dart';
+import '../../widgets/shimmer_loading.dart';
+import '../../widgets/add_transaction_sheet.dart';
 import '../details/transaction_detail_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -12,183 +16,239 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
-  late LocalDatabase localDatabase;
-  List<TransactionModel> allTransactions = [];
-  List<TransactionModel> filteredTransactions = [];
-  bool isLoading = true;
+  String? _selectedType;
+  String? _selectedCategory;
+  DateTimeRange? _selectedDateRange;
+  String _searchQuery = '';
 
-  // Filter state
-  String? selectedType;
-  String? selectedCategory;
-  DateTimeRange? selectedDateRange;
-  String searchQuery = '';
-
-  final List<String> categories = [
-    'All', 'Salary', 'Food', 'Shopping', 'Transport', 'Entertainment', 'Bills', 'Health', 'Other'
+  final List<String> _categories = [
+    'All',
+    'Salary',
+    'Freelance',
+    'Investment',
+    'Gift',
+    'Food',
+    'Shopping',
+    'Transport',
+    'Entertainment',
+    'Bills',
+    'Health',
+    'Other',
   ];
 
   @override
   void initState() {
     super.initState();
-    _initialize();
-  }
-
-  Future<void> _initialize() async {
-    localDatabase = DatabaseFactory.create();
-    await localDatabase.init();
-    await _loadTransactions();
-    setState(() => isLoading = false);
-  }
-
-  Future<void> _loadTransactions() async {
-    final all = await localDatabase.getTransactions();
-    setState(() {
-      allTransactions = all;
-      _applyFilters();
-    });
+    context.read<TransactionBloc>().add(LoadTransactions());
   }
 
   void _applyFilters() {
-    var filtered = List<TransactionModel>.from(allTransactions);
-
-    if (selectedType != null && selectedType != 'All') {
-      filtered = filtered.where((t) => t.type == selectedType).toList();
-    }
-    if (selectedCategory != null && selectedCategory != 'All') {
-      filtered = filtered.where((t) => t.category == selectedCategory).toList();
-    }
-    if (selectedDateRange != null) {
-      filtered = filtered.where((t) {
-        final date = t.createdAt;
-        return date.isAfter(selectedDateRange!.start) &&
-            date.isBefore(selectedDateRange!.end.add(const Duration(days: 1)));
-      }).toList();
-    }
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered.where((t) =>
-          t.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          t.category.toLowerCase().contains(searchQuery.toLowerCase())).toList();
-    }
-
-    setState(() => filteredTransactions = filtered);
+    context.read<TransactionBloc>().add(FilterTransactions(
+          type: _selectedType,
+          category: _selectedCategory,
+          dateRange: _selectedDateRange,
+          searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+        ));
   }
 
-  void _showFilterDialog() {
+  void _clearFilters() {
+    setState(() {
+      _selectedType = null;
+      _selectedCategory = null;
+      _selectedDateRange = null;
+      _searchQuery = '';
+    });
+    context.read<TransactionBloc>().add(LoadTransactions());
+  }
+
+  bool get _hasActiveFilters =>
+      _selectedType != null ||
+      _selectedCategory != null ||
+      _selectedDateRange != null ||
+      _searchQuery.isNotEmpty;
+
+  void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (ctx, setStateBottom) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                left: 20,
-                right: 20,
-                top: 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Filter Transactions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  const Text('Type', style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'All', label: Text('All')),
-                      ButtonSegment(value: 'income', label: Text('Income')),
-                      ButtonSegment(value: 'expense', label: Text('Expense')),
-                    ],
-                    selected: {selectedType ?? 'All'},
-                    onSelectionChanged: (set) {
-                      setStateBottom(() {
-                        selectedType = set.first == 'All' ? null : set.first;
-                      });
-                    },
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        String? tempType = _selectedType;
+        String? tempCategory = _selectedCategory;
+        DateTimeRange? tempDateRange = _selectedDateRange;
+
+        return StatefulBuilder(builder: (ctx, setBottomState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+              left: 24,
+              right: 24,
+              top: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Category', style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory ?? 'All',
-                    items: categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
-                    onChanged: (val) {
-                      setStateBottom(() {
-                        selectedCategory = val == 'All' ? null : val;
-                      });
-                    },
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 16),
+                const Text('Filter Transactions',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                // Type
+                const Text('Type',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: Color(0xFF1E2A3E))),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'All', label: Text('All')),
+                    ButtonSegment(value: 'income', label: Text('Income')),
+                    ButtonSegment(value: 'expense', label: Text('Expense')),
+                  ],
+                  selected: {tempType ?? 'All'},
+                  onSelectionChanged: (s) => setBottomState(
+                      () => tempType = s.first == 'All' ? null : s.first),
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return const Color(0xFF54B998);
+                      }
+                      return null;
+                    }),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Date Range', style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            final range = await showDateRangePicker(
-                              context: ctx, // ✅ Use ctx from bottom sheet
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime.now(),
-                            );
-                            if (range != null) {
-                              setStateBottom(() {
-                                selectedDateRange = range;
-                              });
-                            }
-                          },
-                          child: Text(selectedDateRange == null
+                ),
+                const SizedBox(height: 16),
+                // Category
+                const Text('Category',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: Color(0xFF1E2A3E))),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: tempCategory ?? 'All',
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                  ),
+                  items: _categories
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (v) => setBottomState(
+                      () => tempCategory = v == 'All' ? null : v),
+                ),
+                const SizedBox(height: 16),
+                // Date range
+                const Text('Date Range',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: Color(0xFF1E2A3E))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.date_range, size: 16),
+                        onPressed: () async {
+                          final range = await showDateRangePicker(
+                            context: ctx,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            builder: (context, child) => Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: const ColorScheme.light(
+                                    primary: Color(0xFF54B998)),
+                              ),
+                              child: child!,
+                            ),
+                          );
+                          if (range != null) {
+                            setBottomState(() => tempDateRange = range);
+                          }
+                        },
+                        label: Text(
+                          tempDateRange == null
                               ? 'Select range'
-                              : '${_formatDate(selectedDateRange!.start)} - ${_formatDate(selectedDateRange!.end)}'),
+                              : '${_formatDate(tempDateRange!.start)} – ${_formatDate(tempDateRange!.end)}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                      if (selectedDateRange != null)
-                        IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            setStateBottom(() {
-                              selectedDateRange = null;
-                            });
-                          },
-                        ),
+                    ),
+                    if (tempDateRange != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () =>
+                            setBottomState(() => tempDateRange = null),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
                         onPressed: () {
-                          setStateBottom(() {
-                            selectedType = null;
-                            selectedCategory = null;
-                            selectedDateRange = null;
+                          setBottomState(() {
+                            tempType = null;
+                            tempCategory = null;
+                            tempDateRange = null;
                           });
                         },
-                        child: const Text('Clear All'),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Clear'),
                       ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
                         onPressed: () {
+                          setState(() {
+                            _selectedType = tempType;
+                            _selectedCategory = tempCategory;
+                            _selectedDateRange = tempDateRange;
+                          });
                           _applyFilters();
                           Navigator.pop(context);
                         },
-                        child: const Text('Apply'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF54B998),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        child: const Text('Apply Filters'),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            );
-          },
-        );
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        });
       },
     );
   }
@@ -196,85 +256,303 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         title: const Text('Transactions'),
-        backgroundColor: const Color.fromARGB(255, 230, 229, 228),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E2A3E),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: TransactionSearchDelegate(allTransactions, (query) {
-                  setState(() {
-                    searchQuery = query;
-                    _applyFilters();
-                  });
+            onPressed: () => showSearch(
+              context: context,
+              delegate: _TransactionSearchDelegate(
+                onSearch: (q) => setState(() {
+                  _searchQuery = q;
+                  _applyFilters();
                 }),
-              );
-            },
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                onPressed: _showFilterSheet,
+              ),
+              if (_hasActiveFilters)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF54B998),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadTransactions,
-              child: filteredTransactions.isEmpty
-                  ? const Center(child: Text('No transactions match your filters.'))
-                  : ListView.builder(
-                      itemCount: filteredTransactions.length,
-                      itemBuilder: (ctx, idx) {
-                        final tx = filteredTransactions[idx];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: tx.type == 'income' ? Colors.green.shade100 : Colors.red.shade100,
-                              child: Icon(
-                                tx.type == 'income' ? Icons.trending_up : Icons.trending_down,
-                                color: tx.type == 'income' ? Colors.green : Colors.red,
-                              ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => BlocProvider.value(
+            value: context.read<TransactionBloc>(),
+            child: const AddTransactionSheet(),
+          ),
+        ),
+        backgroundColor: const Color(0xFF54B998),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: Column(
+        children: [
+          // Active filter chips
+          if (_hasActiveFilters)
+            Container(
+              color: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          if (_selectedType != null)
+                            _FilterChip(
+                              label: _selectedType!,
+                              onRemove: () {
+                                setState(() => _selectedType = null);
+                                _applyFilters();
+                              },
                             ),
-                            title: Text(tx.title),
-                            subtitle: Text('${tx.category} • ${_formatDate(tx.createdAt)}'),
-                            trailing: Text(
-                              '${tx.type == 'income' ? '+' : '-'}${tx.amount.toStringAsFixed(2)} birr',
-                              style: TextStyle(
-                                color: tx.type == 'income' ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          if (_selectedCategory != null)
+                            _FilterChip(
+                              label: _selectedCategory!,
+                              onRemove: () {
+                                setState(() => _selectedCategory = null);
+                                _applyFilters();
+                              },
                             ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TransactionDetailScreen(transaction: tx),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
+                          if (_selectedDateRange != null)
+                            _FilterChip(
+                              label:
+                                  '${_formatDate(_selectedDateRange!.start)} – ${_formatDate(_selectedDateRange!.end)}',
+                              onRemove: () {
+                                setState(() => _selectedDateRange = null);
+                                _applyFilters();
+                              },
+                            ),
+                          if (_searchQuery.isNotEmpty)
+                            _FilterChip(
+                              label: '"$_searchQuery"',
+                              onRemove: () {
+                                setState(() => _searchQuery = '');
+                                _applyFilters();
+                              },
+                            ),
+                        ],
+                      ),
                     ),
+                  ),
+                  TextButton(
+                    onPressed: _clearFilters,
+                    child: const Text('Clear all',
+                        style: TextStyle(
+                            color: Colors.red, fontSize: 12)),
+                  ),
+                ],
+              ),
             ),
+          // List
+          Expanded(
+            child: BlocConsumer<TransactionBloc, TransactionState>(
+              listener: (context, state) {
+                if (state is TransactionError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(state.message),
+                        behavior: SnackBarBehavior.floating),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is TransactionInitial ||
+                    state is TransactionLoading) {
+                  return const TransactionListShimmer();
+                } else if (state is TransactionLoaded) {
+                  final txns = state.filteredTransactions;
+                  if (txns.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off,
+                              size: 56, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No transactions match your filters',
+                            style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 15),
+                          ),
+                          if (_hasActiveFilters) ...[
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: _clearFilters,
+                              child: const Text('Clear filters'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () async =>
+                        context.read<TransactionBloc>().add(LoadTransactions()),
+                    color: const Color(0xFF54B998),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                      itemCount: txns.length,
+                      itemBuilder: (ctx, i) =>
+                          _buildTile(context, txns[i]),
+                    ),
+                  );
+                } else if (state is TransactionError) {
+                  return Center(child: Text('Error: ${state.message}'));
+                }
+                return const TransactionListShimmer();
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  String _formatDate(DateTime date) => '${date.day}/${date.month}/${date.year}';
+  Widget _buildTile(BuildContext context, TransactionModel tx) {
+    final isIncome = tx.type == 'income';
+    return GestureDetector(
+      onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => TransactionDetailScreen(transaction: tx))),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isIncome ? Colors.green.shade50 : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isIncome ? Icons.trending_up : Icons.trending_down,
+                color:
+                    isIncome ? Colors.green.shade600 : Colors.red.shade600,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(tx.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E2A3E)),
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('${tx.category} • ${_formatDate(tx.createdAt)}',
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 12)),
+                ],
+              ),
+            ),
+            Text(
+              '${isIncome ? '+' : '-'}${tx.amount.toStringAsFixed(2)} birr',
+              style: TextStyle(
+                  color:
+                      isIncome ? Colors.green.shade600 : Colors.red.shade600,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
-// Search delegate
-class TransactionSearchDelegate extends SearchDelegate {
-  final List<TransactionModel> transactions;
-  final Function(String) onSearch;
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onRemove;
 
-  TransactionSearchDelegate(this.transactions, this.onSearch);
+  const _FilterChip({required this.label, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF54B998).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF54B998).withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  color: Color(0xFF3DA882),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close,
+                size: 14, color: Color(0xFF3DA882)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransactionSearchDelegate extends SearchDelegate {
+  final Function(String) onSearch;
+  _TransactionSearchDelegate({required this.onSearch});
+
+  @override
+  String get searchFieldLabel => 'Search transactions...';
 
   @override
   List<Widget>? buildActions(BuildContext context) => [
@@ -289,39 +567,22 @@ class TransactionSearchDelegate extends SearchDelegate {
 
   @override
   Widget? buildLeading(BuildContext context) => IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => close(context, null),
+        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+        onPressed: () {
+          onSearch('');
+          close(context, null);
+        },
       );
 
   @override
   Widget buildResults(BuildContext context) {
     onSearch(query);
-    return _buildResultsList();
+    return const SizedBox.shrink();
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
     onSearch(query);
-    return _buildResultsList();
-  }
-
-  Widget _buildResultsList() {
-    final filtered = transactions.where((t) =>
-        t.title.toLowerCase().contains(query.toLowerCase()) ||
-        t.category.toLowerCase().contains(query.toLowerCase())).toList();
-    if (filtered.isEmpty) {
-      return const Center(child: Text('No transactions found'));
-    }
-    return ListView.builder(
-      itemCount: filtered.length,
-      itemBuilder: (ctx, i) => ListTile(
-        title: Text(filtered[i].title),
-        subtitle: Text(filtered[i].category),
-        trailing: Text('${filtered[i].amount} birr'),
-        onTap: () {
-          close(ctx, null);
-        },
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
