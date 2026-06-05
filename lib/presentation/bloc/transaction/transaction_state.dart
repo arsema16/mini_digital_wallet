@@ -16,15 +16,40 @@ class TransactionLoaded extends TransactionState {
   final double totalBalance;
   final double totalIncome;
   final double totalExpense;
+  final Map<String, double> categorySpending;
+
   const TransactionLoaded({
     required this.allTransactions,
     required this.filteredTransactions,
     required this.totalBalance,
     required this.totalIncome,
     required this.totalExpense,
+    required this.categorySpending,
   });
+
+  TransactionLoaded copyWith({
+    List<TransactionModel>? filteredTransactions,
+    Map<String, double>? categorySpending,
+  }) {
+    return TransactionLoaded(
+      allTransactions: allTransactions,
+      filteredTransactions: filteredTransactions ?? this.filteredTransactions,
+      totalBalance: totalBalance,
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+      categorySpending: categorySpending ?? this.categorySpending,
+    );
+  }
+
   @override
-  List<Object?> get props => [allTransactions, filteredTransactions, totalBalance, totalIncome, totalExpense];
+  List<Object?> get props => [
+        allTransactions,
+        filteredTransactions,
+        totalBalance,
+        totalIncome,
+        totalExpense,
+        categorySpending,
+      ];
 }
 
 class TransactionError extends TransactionState {

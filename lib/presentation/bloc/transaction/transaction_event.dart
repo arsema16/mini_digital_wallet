@@ -36,7 +36,14 @@ class FilterTransactions extends TransactionEvent {
   final String? category;
   final DateTimeRange? dateRange;
   final String? searchQuery;
-  const FilterTransactions({this.type, this.category, this.dateRange, this.searchQuery});
+
+  const FilterTransactions({
+    this.type,
+    this.category,
+    this.dateRange,
+    this.searchQuery,
+  });
+
   @override
   List<Object?> get props => [type, category, dateRange, searchQuery];
 }
