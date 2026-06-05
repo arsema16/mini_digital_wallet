@@ -25,31 +25,6 @@ class TransactionModel {
     this.isSynced = false,
   });
 
-  // Factory for creating a new transaction (unsynced)
-  factory TransactionModel.newTransaction({
-    required String title,
-    required double amount,
-    required String type,
-    required String category,
-    String? paymentMethod,
-    String? refId,
-  }) {
-    final now = DateTime.now();
-    return TransactionModel(
-      id: now.millisecondsSinceEpoch.toString(),
-      title: title,
-      amount: amount,
-      type: type,
-      category: category,
-      paymentMethod: paymentMethod,
-      refId: refId,
-      createdAt: now,
-      updatedAt: now,
-      isSynced: false,
-    );
-  }
-
-  // From SQLite Map
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'],
@@ -65,7 +40,6 @@ class TransactionModel {
     );
   }
 
-  // To SQLite Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -81,7 +55,6 @@ class TransactionModel {
     };
   }
 
-  // From Firestore
   factory TransactionModel.fromFirestore(Map<String, dynamic> json, String docId) {
     return TransactionModel(
       id: docId,
@@ -97,7 +70,6 @@ class TransactionModel {
     );
   }
 
-  // To Firestore
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,
@@ -111,7 +83,6 @@ class TransactionModel {
     };
   }
 
-  // To Entity
   TransactionEntity toEntity() {
     return TransactionEntity(
       id: id,
@@ -123,10 +94,25 @@ class TransactionModel {
       refId: refId,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      isSynced: isSynced,
     );
   }
 
-  // Copy with method for updating isSynced
+  factory TransactionModel.fromEntity(TransactionEntity entity) {
+    return TransactionModel(
+      id: entity.id,
+      title: entity.title,
+      amount: entity.amount,
+      type: entity.type,
+      category: entity.category,
+      paymentMethod: entity.paymentMethod,
+      refId: entity.refId,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      isSynced: false,
+    );
+  }
+
   TransactionModel copyWith({
     String? id,
     String? title,
@@ -150,22 +136,6 @@ class TransactionModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
-    );
-  }
-
-  // From Entity
-  factory TransactionModel.fromEntity(TransactionEntity entity) {
-    return TransactionModel(
-      id: entity.id,
-      title: entity.title,
-      amount: entity.amount,
-      type: entity.type,
-      category: entity.category,
-      paymentMethod: entity.paymentMethod,
-      refId: entity.refId,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-      isSynced: false,
     );
   }
 }

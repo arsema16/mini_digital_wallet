@@ -8,6 +8,7 @@ class TransactionEntity {
   final String? refId;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isSynced;
 
   TransactionEntity({
     required this.id,
@@ -19,5 +20,6 @@ class TransactionEntity {
     this.refId,
     required this.createdAt,
     required this.updatedAt,
+    this.isSynced = false,
   });
 }
