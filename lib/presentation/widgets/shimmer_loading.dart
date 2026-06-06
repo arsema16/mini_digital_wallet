@@ -1,7 +1,6 @@
-// lib/presentation/widgets/shimmer_loading.dart
-
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../core/constants/app_colors.dart';
 
 class ShimmerBox extends StatelessWidget {
   final double width;
@@ -18,8 +17,8 @@ class ShimmerBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
+      baseColor: AppColors.shimmerBase,
+      highlightColor: AppColors.shimmerHighlight,
       child: Container(
         width: width,
         height: height,
@@ -32,63 +31,59 @@ class ShimmerBox extends StatelessWidget {
   }
 }
 
-/// Dashboard shimmer skeleton
 class DashboardShimmer extends StatelessWidget {
   const DashboardShimmer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Profile row
-          Row(
-            children: [
-              Shimmer.fromColors(
-                baseColor: Colors.grey.shade300,
-                highlightColor: Colors.grey.shade100,
-                child: const CircleAvatar(radius: 24, backgroundColor: Colors.white),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Shimmer.fromColors(
+              baseColor: AppColors.shimmerBase,
+              highlightColor: AppColors.shimmerHighlight,
+              child: Container(
+                height: 220,
+                color: Colors.white,
               ),
-              const SizedBox(width: 12),
-              Column(
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ShimmerBox(width: 80, height: 12, radius: 6),
-                  const SizedBox(height: 6),
-                  ShimmerBox(width: 140, height: 16, radius: 6),
+                  Row(
+                    children: List.generate(
+                      3,
+                      (_) => Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 4),
+                          child:
+                              ShimmerBox(width: double.infinity, height: 80, radius: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ShimmerBox(width: double.infinity, height: 180, radius: 18),
+                  const SizedBox(height: 24),
+                  ShimmerBox(width: 160, height: 16, radius: 6),
+                  const SizedBox(height: 16),
+                  ...List.generate(4, (_) => const _TransactionShimmerTile()),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Balance card
-          ShimmerBox(
-            width: double.infinity,
-            height: 180,
-            radius: 24,
-          ),
-          const SizedBox(height: 20),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(child: ShimmerBox(width: double.infinity, height: 52, radius: 14)),
-              const SizedBox(width: 16),
-              Expanded(child: ShimmerBox(width: double.infinity, height: 52, radius: 14)),
-            ],
-          ),
-          const SizedBox(height: 28),
-          ShimmerBox(width: 180, height: 18, radius: 6),
-          const SizedBox(height: 16),
-          ...List.generate(4, (_) => const _TransactionShimmerTile()),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Transaction list shimmer skeleton
 class TransactionListShimmer extends StatelessWidget {
   const TransactionListShimmer({super.key});
 
@@ -108,10 +103,10 @@ class _TransactionShimmerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
+      baseColor: AppColors.shimmerBase,
+      highlightColor: AppColors.shimmerHighlight,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -120,11 +115,11 @@ class _TransactionShimmerTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
-              decoration: const BoxDecoration(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
                 color: Colors.white,
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             const SizedBox(width: 12),
@@ -133,8 +128,8 @@ class _TransactionShimmerTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    height: 14,
-                    width: 120,
+                    height: 13,
+                    width: 130,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
@@ -143,7 +138,7 @@ class _TransactionShimmerTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Container(
                     height: 10,
-                    width: 80,
+                    width: 90,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
@@ -156,8 +151,8 @@ class _TransactionShimmerTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  height: 14,
-                  width: 70,
+                  height: 13,
+                  width: 72,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
@@ -166,7 +161,7 @@ class _TransactionShimmerTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Container(
                   height: 10,
-                  width: 50,
+                  width: 44,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
