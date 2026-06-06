@@ -92,7 +92,7 @@ class TransactionListShimmer extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: 8,
-      itemBuilder: (_, __) => const _TransactionShimmerTile(),
+      itemBuilder: (_, _) => const _TransactionShimmerTile(),
     );
   }
 }

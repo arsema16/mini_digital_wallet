@@ -166,7 +166,7 @@ void showFilterSheet({
                     fontSize: 13)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: tempCategory ?? 'All',
+              initialValue: tempCategory ?? 'All',
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

@@ -266,7 +266,9 @@ class _LoginCard extends StatelessWidget {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                      .hasMatch(v.trim())) return 'Invalid email';
+                      .hasMatch(v.trim())) {
+                    return 'Invalid email';
+                  }
                   return null;
                 },
               ),
@@ -471,7 +473,9 @@ class _RegisterCard extends StatelessWidget {
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
                   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                      .hasMatch(v.trim())) return 'Invalid email';
+                      .hasMatch(v.trim())) {
+                    return 'Invalid email';
+                  }
                   return null;
                 },
               ),
@@ -485,11 +489,13 @@ class _RegisterCard extends StatelessWidget {
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Required';
                   if (v.length < 8) return 'At least 8 characters';
-                  if (!RegExp(r'[A-Z]').hasMatch(v))
+                  if (!RegExp(r'[A-Z]').hasMatch(v)) {
                     return 'Add an uppercase letter';
+                  }
                   if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
-                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v))
+                  if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) {
                     return 'Add a special character';
+                  }
                   return null;
                 },
               ),

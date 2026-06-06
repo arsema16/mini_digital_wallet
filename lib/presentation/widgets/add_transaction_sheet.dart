@@ -176,7 +176,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
               // Category dropdown
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: _decoration('Category', Icons.category_outlined),
                 items: _categories
                     .map((c) =>
@@ -188,7 +188,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
               // Payment method dropdown
               DropdownButtonFormField<String>(
-                value: _paymentMethod,
+                initialValue: _paymentMethod,
                 decoration:
                     _decoration('Payment method', Icons.payment_outlined),
                 items: AppConstants.paymentMethods
