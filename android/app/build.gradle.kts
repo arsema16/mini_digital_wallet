@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.example.mini_digital_wallet"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.example.mini_digital_wallet"
