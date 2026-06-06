@@ -1,5 +1,4 @@
-// lib/presentation/pages/auth/register_page.dart
-
+import '../../../core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
@@ -43,10 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is Authenticated) {
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/dashboard', (route) => false);
-        } else if (state is AuthError) {
+        if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
@@ -57,13 +53,13 @@ class _RegisterPageState extends State<RegisterPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new,
-                color: Color(0xFF1E2A3E), size: 20),
+                color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -73,7 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Center(
                   child: Column(
                     children: [
@@ -81,13 +76,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF54B998).withOpacity(0.15),
+                          color: AppColors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Icon(
                           Icons.person_add_outlined,
                           size: 38,
-                          color: Color(0xFF54B998),
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -96,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E2A3E),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -108,12 +103,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                // Form
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Full name
                       TextFormField(
                         controller: _nameController,
                         textInputAction: TextInputAction.next,
@@ -133,7 +126,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Email
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -155,7 +147,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Password
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -186,7 +177,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Confirm password
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirm,
@@ -218,7 +208,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         },
                       ),
                       const SizedBox(height: 28),
-                      // Register button
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           final isLoading = state is AuthLoading;
@@ -228,10 +217,10 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: ElevatedButton(
                               onPressed: isLoading ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF54B998),
+                                backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor:
-                                    const Color(0xFF54B998).withOpacity(0.6),
+                                    AppColors.primary.withValues(alpha: 0.6),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14)),
                                 elevation: 0,
@@ -259,7 +248,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                // Login link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -270,7 +258,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
-                          color: Color(0xFF54B998),
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -301,7 +289,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF54B998), width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -318,3 +306,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+
+
+
