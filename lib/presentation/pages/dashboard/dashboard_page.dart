@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:chapa_unofficial/chapa_unofficial.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../bloc/auth/auth_bloc.dart';
@@ -40,6 +41,89 @@ class _DashboardPageState extends State<DashboardPage> {
         child: AddTransactionSheet(initialType: type),
       ),
     );
+  }
+
+  Future<void> _startTopUp() async {
+    // Show a dialog to enter top-up amount
+    final amountController = TextEditingController();
+
+    final confirmed = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Top Up Wallet'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the amount to top up (ETB):'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                prefixText: 'ETB ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(amountController.text);
+              if (amount != null && amount > 0) {
+                Navigator.pop(ctx, amount);
+              }
+            },
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == null) return;
+
+    // Start Chapa payment
+    try {
+      final txRef = TxRefRandomGenerator.generate(prefix: 'wallet-topup');
+      
+      String? paymentUrl = await Chapa.getInstance.startPayment(
+        context: context,
+        amount: confirmed.toString(),
+        currency: 'ETB',
+        txRef: txRef,
+        firstName: _user?.displayName?.split(' ').firstOrNull,
+        lastName: _user?.displayName?.split(' ').lastOrNull,
+        email: _user?.email,
+        onInAppPaymentSuccess: (msg) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Payment successful!'),
+              backgroundColor: AppColors.income,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+        onInAppPaymentError: (msg) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Payment failed: $msg'),
+              backgroundColor: AppColors.expense,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppColors.expense,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _confirmLogout() {
@@ -236,6 +320,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           bgColor: AppColors.primaryLight,
                           onTap: () =>
                               context.read<TransactionBloc>().add(SyncTransactions()),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: QuickActionButton(
+                          icon: Icons.credit_card_outlined,
+                          label: 'Top Up',
+                          iconColor: AppColors.primary,
+                          bgColor: AppColors.primaryLight,
+                          onTap: _startTopUp,
                         ),
                       ),
                     ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:chapa_unofficial/chapa_unofficial.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_constants.dart';
@@ -15,6 +16,11 @@ import 'routes/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Configure Chapa SDK
+  // Replace with your own Chapa private key from https://dashboard.chapa.co/
+  Chapa.configure(privateKey: 'YOUR_CHAPA_PRIVATE_KEY_HERE');
+  
   runApp(const MyApp());
 }
 
