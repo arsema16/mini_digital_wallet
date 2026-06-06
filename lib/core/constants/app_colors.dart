@@ -27,7 +27,6 @@ class AppColors {
   static const Color balanceGradientStart = Color(0xFF1A73E8);
   static const Color balanceGradientEnd = Color(0xFF0D47A1);
 
-  // can't be const because withValues isn't const
   static Color get shadowColor =>
       const Color(0xFF000000).withValues(alpha: 0.08);
 }
